@@ -35,6 +35,8 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 GOOGLE_CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
 NOMBRE_HOJA_DRIVE = "Reporte de Ordenes con Fraude"
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 DB_CONFIG = {
     "dbname": "sistema_contracargos",
     "user": "postgres",
@@ -45,7 +47,14 @@ DB_CONFIG = {
 
 def get_db_connection():
     try:
-        conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
+        # Si existe DATABASE_URL (estamos en Render), usa la URL de la nube
+        if DATABASE_URL:
+            # Render a veces entrega la URL iniciando con 'postgres://', corregimos a 'postgresql://'
+            url = DATABASE_URL.replace("postgres://", "postgresql://", 1) if DATABASE_URL.startswith("postgres://") else DATABASE_URL
+            conn = psycopg2.connect(url, cursor_factory=RealDictCursor)
+        else:
+            # Si estamos ejecutando en local, usa la configuración DB_CONFIG tradicional
+            conn = psycopg2.connect(**DB_CONFIG, cursor_factory=RealDictCursor)
         return conn
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error de conexión a la BD: {str(e)}")
