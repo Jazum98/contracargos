@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Contracargos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans">
+    <!-- ========================================== -->
+    <!-- MODAL DE LOGIN (PANTALLA INICIAL)          -->
+    <!-- ========================================== -->
+
+<div id="modal-login" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="inline-block bg-blue-600/20 p-4 rounded-full text-blue-400 mb-3">
+                    <i class="fa-solid fa-user-lock text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-100">Iniciar Sesión</h2>
+                <p class="text-xs text-slate-400 mt-1">Sistema de Gestión de Contracargos</p>
+            </div>
+            <form id="formLogin" onsubmit="iniciarSesion(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Usuario o Correo</label>
+                    <input type="text" id="login_username" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 focus:border-blue-500 focus:outline-none" placeholder="Ej: jzumaeta">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Contraseña</label>
+                    <input type="password" id="login_password" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 focus:border-blue-500 focus:outline-none" placeholder="••••••••">
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg transition duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Ingresar al Sistema
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL CAMBIO OBLIGATORIO DE CONTRASEÑA    -->
+    <!-- ========================================== -->
+    <div id="modal-cambio-pass" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+        <div class="bg-slate-800 border border-amber-500/50 p-8 rounded-2xl shadow-2xl w-full max-w-md">
+            <div class="text-center mb-6">
+                <div class="inline-block bg-amber-500/20 p-4 rounded-full text-amber-400 mb-3">
+                    <i class="fa-solid fa-key text-3xl"></i>
+                </div>
+                <h2 class="text-xl font-bold text-slate-100">Cambio de Contraseña Obligatorio</h2>
+                <p class="text-xs text-slate-400 mt-1">Es tu primer ingreso. Ingresa tu nueva contraseña para continuar.</p>
+            </div>
+            <form id="formCambioPass" onsubmit="ejecutarCambioPassword(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nueva Contraseña</label>
+                    <input type="password" id="new_password" required minlength="6" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 focus:border-amber-500 focus:outline-none" placeholder="Mínimo 6 caracteres">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Confirmar Contraseña</label>
+                    <input type="password" id="confirm_password" required minlength="6" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-slate-200 focus:border-amber-500 focus:outline-none" placeholder="Repite la contraseña">
+                </div>
+                <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-lg shadow-lg transition duration-200 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-floppy-disk"></i> Actualizar y Continuar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="bg-slate-800 border-b border-slate-700 p-4 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div class="flex items-center gap-3">
+                    <img src="/static/logo.png" alt="Logo" class="h-10 w-auto object-contain" onerror="this.style.display='none'">
+                    <h1 class="text-xl font-bold tracking-wide">Panel de Contracargos <span class="text-blue-400">BAC & Neonet</span></h1>
+                </div>
+            </div>
+            
+            <!-- PANEL DE USUARIO Y SALIDA -->
+            <div class="flex items-center gap-4 text-sm">
+                <div id="info-usuario-header" class="hidden flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-user-circle text-blue-400 text-lg"></i>
+                    <div>
+                        <div id="hdr-user-nombre" class="font-bold text-slate-200 text-xs"></div>
+                        <div id="hdr-user-rol" class="text-[10px] text-emerald-400 font-semibold uppercase"></div>
+                    </div>
+                </div>
+                <button id="btn-logout" onclick="cerrarSesion()" class="hidden bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-right-from-bracket"></i> Salir
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- NAVEGACIÓN PRINCIPAL -->
+    <main class="max-w-7xl mx-auto p-6">
+        <nav class="flex space-x-2 border-b border-slate-700 mb-6">
+            <button onclick="cambiarTab('registro')" id="tab-registro" class="py-2 px-4 rounded-t-lg font-medium bg-blue-600 text-white border-b-2 border-blue-400">
+                <i class="fa-solid fa-plus-circle mr-2"></i>Nuevo Contracargo
+            </button>
+            <button onclick="cambiarTab('gestion'); cargarContracargos();" id="tab-gestion" class="py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-list-check mr-2"></i>Gestión y Resoluciones
+            </button>
+            <button onclick="cambiarTab('alertas'); cargarAlertas();" id="tab-alertas" class="py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i>Alertas Duplicadas
+            </button>
+            <button onclick="cambiarTab('reportes'); cargarReportes();" id="tab-reportes" class="py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-chart-pie mr-2"></i>Reporte (4 Semanas)
+            </button>
+            <button onclick="cambiarTab('fraudes'); cargarFraudesPreventivos();" id="tab-fraudes" class="py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-table-list mr-2"></i>Monitoreo Fraudes 
+            </button>
+            <!-- NUEVA PESTAÑA: GESTIÓN DE USUARIOS (SOLO ADMINS) -->
+            <button onclick="cambiarTab('usuarios')" id="tab-usuarios" class="hidden py-2 px-4 rounded-t-lg font-medium text-amber-400 hover:text-amber-200 whitespace-nowrap">
+                <i class="fa-solid fa-users-gear mr-2"></i>Gestión de Usuarios
+            </button>
+        </nav>
+
+        <!-- SECCIÓN 1: NUEVO CONTRACARGO -->
+        <section id="sec-registro" class="block bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <h2 class="text-lg font-semibold mb-4 text-blue-400 flex items-center">
+                <i class="fa-solid fa-file-invoice mr-2"></i> Datos de la Transacción en Disputa
+            </h2>
+            <form id="formContracargo" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Pasarela</label>
+                    <select id="pasarela" onchange="toggleCasoBAC()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                        <option value="BAC">BAC Credomatic</option>
+                        <option value="Neonet">Neonet</option>
+                    </select>
+                </div>
+
+                <div id="box-caso">
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">No. de Caso / Ticket (BAC)</label>
+                    <input type="text" id="no_idcontracargo" placeholder="Ej: CASO-8849" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">No. Orden Interna</label>
+                    <input type="text" id="no_orden" placeholder="Ej: ORD-251692" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Correo Cliente</label>
+                    <input type="email" id="correo_cliente" placeholder="cliente@ejemplo.com" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tarjeta Mascarada</label>
+                    <input type="text" id="tarjeta_mascarada" placeholder="411111******1111" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Monto ($ / Q)</label>
+                    <input type="number" step="0.01" id="monto" placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Fecha Transacción</label>
+                    <input type="date" id="fecha_transaccion" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Fecha Contracargo</label>
+                    <input type="date" id="fecha_contracargo" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <!-- UNIDAD DE NEGOCIO -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Unidad de Negocio</label>
+                    <select id="unidad_negocio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                        <option value="">Seleccione...</option>
+                        <option value="1P">1P</option>
+                        <option value="TM">TM</option>
+                        <option value="Marketplace">Marketplace</option>
+                        <option value="Selle">Selle</option>
+                        <option value="C Mixta">C Mixta</option>
+                    </select>
+                </div>
+
+                <!-- MÉTODO DE PAGO -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Método de Pago</label>
+                    <select id="metodo_pago" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Contado">Contado</option>
+                        <option value="2 cuotas">2 cuotas</option>
+                        <option value="3 cuotas">3 cuotas</option>
+                        <option value="6 cuotas">6 cuotas</option>
+                        <option value="10 cuotas">10 cuotas</option>
+                        <option value="12 cuotas">12 cuotas</option>
+                        <option value="15 cuotas">15 cuotas</option>
+                        <option value="18 cuotas">18 cuotas</option>
+                        <option value="24 cuotas">24 cuotas</option>
+                        <option value="36 cuotas">36 cuotas</option>
+                        <option value="48 cuotas">48 cuotas</option>
+                    </select>
+                </div>
+
+                <!-- ESTADO DE ORDEN -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Estado de Orden</label>
+                    <select id="estado_orden" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                        <option value="Entregada">Entregada</option>
+                        <option value="No Entregada">No Entregada</option>
+                    </select>
+                </div>
+
+                <!-- ESTADO OCADMIN -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Estado OcAdmin</label>
+                    <select id="estado_ocadmin" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Fraude Entregada">Fraude Entregada</option>
+                        <option value="Fraude No entregada">Fraude No entregada</option>
+                        <option value="Reembolso">Reembolso</option>
+                    </select>
+                </div>
+
+                <!-- NO. DE AUTORIZACIÓN -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">No. de Autorización</label>
+                    <input type="text" id="autorizacion" placeholder="Número obligatorio" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                </div>
+
+                <!-- TIPO DE CONTRACARGO -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Tipo Contracargo</label>
+                    <select id="tipo_contracargo" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none" required>
+                        <option value="">Seleccione...</option>
+                        <option value="Fraude">Fraude</option>
+                        <option value="Reembolso">Reembolso</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Observaciones</label>
+                    <textarea id="observaciones" rows="2" placeholder="Notas adicionales..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:border-blue-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="md:col-span-3 flex justify-end mt-2">
+                    <button type="button" onclick="guardarContracargo()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-200">
+                        <i class="fa-solid fa-floppy-disk mr-2"></i>Registrar Contracargo
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- SECCIÓN 2: GESTIÓN Y RESOLUCIONES -->
+        <section id="sec-gestion" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl overflow-x-auto">
+            
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-4">
+                <h2 class="text-lg font-semibold text-emerald-400 flex items-center">
+                    <i class="fa-solid fa-list mr-2"></i> Contracargos Registrados
+                </h2>
+
+                <button onclick="descargarReporteExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 shadow-lg transition">
+                    <i class="fa-solid fa-file-excel"></i> Descargar Reporte (Excel/CSV)
+                </button>
+            </div>
+
+            <!-- PANEL DE FILTROS AHORA REORGANIZADO EN 2 FILAS LIMPIAS -->
+            <div class="bg-slate-900/80 rounded-xl p-4 mb-4 border border-slate-700 space-y-3">
+                <!-- Fila 1: Búsqueda principal -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Buscar Orden</label>
+                        <input type="text" id="filtroOrden" onkeyup="aplicarFiltrosTabla()" placeholder="Ej: ORD-251692" 
+                               class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Año</label>
+                        <select id="filtroAnio" onchange="aplicarFiltrosTabla()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="">Todos los Años</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Mes</label>
+                        <select id="filtroMes" onchange="aplicarFiltrosTabla()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                            <option value="">Todos los Meses</option>
+                            <option value="1">Enero</option>
+                            <option value="2">Febrero</option>
+                            <option value="3">Marzo</option>
+                            <option value="4">Abril</option>
+                            <option value="5">Mayo</option>
+                            <option value="6">Junio</option>
+                            <option value="7">Julio</option>
+                            <option value="8">Agosto</option>
+                            <option value="9">Septiembre</option>
+                            <option value="10">Octubre</option>
+                            <option value="11">Noviembre</option>
+                            <option value="12">Diciembre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Fila 2: Filtros secundarios -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Pasarela</label>
+                        <select id="filtroPasarela" onchange="aplicarFiltrosTabla()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none">
+                            <option value="">Todas las Pasarelas</option>
+                            <option value="BAC">BAC Credomatic</option>
+                            <option value="Neonet">Neonet</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 mb-1">Resolución</label>
+                        <select id="filtroResolucion" onchange="aplicarFiltrosTabla()" class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-sm text-slate-200 focus:outline-none">
+                            <option value="">Todas las Resoluciones</option>
+                            <option value="Ganado">Ganado</option>
+                            <option value="Perdido">Perdido</option>
+                            <option value="Pendiente">Pendiente</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-end">
+                        <button onclick="limpiarFiltros()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLA DE GESTIÓN -->
+            <table class="w-full text-left text-sm text-slate-300 border-collapse">
+                <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
+                    <tr>
+                        <th class="p-3">ID / Pasarela</th>
+                        <th class="p-3">Orden / Correo</th>
+                        <th class="p-3">Tarjeta / Autorización</th>
+                        <th class="p-3">Unidad / Método</th>
+                        <th class="p-3">Estado Orden / OcAdmin</th>
+                        <th class="p-3">Monto</th>
+                        <th class="p-3">F. Contracargo</th>
+                        <th class="p-3">P&L</th>
+                        <th class="p-3">F. Info Enviada</th>
+                        <th class="p-3">F. Resolución</th>
+                        <th class="p-3">Evidencia (PDF/ZIP)</th>
+                        <th class="p-3">Resolución</th>
+                        <th class="p-3 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-contracargos" class="divide-y divide-slate-700">
+                </tbody>
+            </table>
+        </section>
+
+        <!-- SECCIÓN 3: ALERTAS DUPLICADAS -->
+        <section id="sec-alertas" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <h2 class="text-lg font-semibold mb-4 text-rose-400 flex items-center">
+                <i class="fa-solid fa-triangle-exclamation mr-2"></i> Detección de Tarjetas Fraudulentas
+            </h2>
+            <div id="contenedor-alertas" class="space-y-4">
+            </div>
+        </section>
+
+        <!-- SECCIÓN 4: REPORTES (4 SEMANAS) CON BOTÓN EXCEL -->
+        <section id="sec-reportes" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-amber-400"></i> Reporte Agrupado por Pasarela (Últimas 4 Semanas)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Matriz Consolidada de Contracargos</p>
+                </div>
+                
+                <!-- BOTÓN DE DESCARGA EXCEL DE LA MATRIZ -->
+                <button onclick="descargarMatrizExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-lg transition-all">
+                    <i class="fa-solid fa-file-excel text-sm"></i> Descargar Reporte (Excel)
+                </button>
+            </div>
+
+            <div id="contenedor-reportes" class="space-y-6">
+            </div>
+        </section>
+
+        <!-- 🟢 SECCIÓN 5: MONITOREO PREVENTIVO DE FRAUDES (DRIVE) -->
+        <section id="sec-fraudes" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-table-list"></i> Monitoreo Preventivo de Fraudes
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Sincronizado en tiempo real con Google Sheets (Sheet1)</p>
+                </div>
+                <button onclick="cargarFraudesPreventivos()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 shadow-lg transition">
+                    <i class="fa-solid fa-rotate"></i> Actualizar Tabla
+                </button>
+            </div>
+
+            <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-700 mb-4 max-w-md">
+                <label class="block text-xs font-semibold text-slate-400 mb-1">Buscar por No. de Orden</label>
+                <div class="relative">
+                    <input type="text" id="filtroOrdenFraudes" onkeyup="filtrarTablaFraudes()" placeholder="Ej: ORD-251692" 
+                           class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-amber-400 pr-8">
+                    <i class="fa-solid fa-magnifying-glass absolute right-3 top-3 text-slate-400 text-xs"></i>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-slate-700">
+                <table class="w-full text-left text-sm text-slate-300 border-collapse">
+                    <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
+                        <tr>
+                            <th class="p-3">ID Orden</th>
+                            <th class="p-3">Cliente / Correo</th>
+                            <th class="p-3">Tarjeta</th>
+                            <th class="p-3">Monto</th>
+                            <th class="p-3">F. Colocación</th>
+                            <th class="p-3 text-center">Estatus Contracargo</th>
+                            <th class="p-3 text-center">F. Contracargo Recibido</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-fraudes-drive" class="divide-y divide-slate-700 bg-slate-800/50">
+                        <!-- Filas dinámicas -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        
+        <!-- SECCIÓN 6: NUEVA PESTAÑA GESTIÓN DE USUARIOS (SOLO SUPERADMIN / ADMIN) -->
+        <section id="sec-usuarios" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
+            <h2 class="text-xl font-bold text-amber-400 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-user-plus"></i> Crear Nuevo Usuario del Sistema
+            </h2>
+            <form id="formUsuario" onsubmit="crearNuevoUsuario(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mb-8 bg-slate-900 p-5 rounded-xl border border-slate-700">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Username (Usuario)</label>
+                    <input type="text" id="new_user_username" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Ej: mlopez">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nombre Completo</label>
+                    <input type="text" id="new_user_nombre" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Ej: Maria Lopez">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Correo Electrónico</label>
+                    <input type="email" id="new_user_email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="maria@empresa.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Rol de Acceso</label>
+                    <select id="new_user_rol" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500">
+                        <option value="Analista">Analista (Creación y Gestión)</option>
+                        <option value="Visor">Visor (Solo Lectura y Exportación)</option>
+                        <option value="Admin">Admin (Administrador completo)</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2 flex justify-end mt-2">
+                    <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg transition">
+                        <i class="fa-solid fa-user-check mr-2"></i>Crear Usuario
+                    </button>
+                </div>
+            </form>
+        </section>
+
+    </main>
+
+    <!-- JAVASCRIPT -->
+    <script>
+        const API_URL = `${window.location.origin}/api`;
+        let todosLosContracargos = [];
+        let todosLosFraudesDrive = [];
+        let usuarioActual = null;
+
+        // INICIALIZACIÓN
+        window.addEventListener('DOMContentLoaded', () => {
+            const sesionGuardada = localStorage.getItem('usuario_contracargos');
+            if (sesionGuardada) {
+                usuarioActual = JSON.parse(sesionGuardada);
+                configurarInterfazSesion();
+            } else {
+                document.getElementById('modal-login').classList.remove('hidden');
+            }
+        });
+
+        // ==========================================
+        // AUTENTICACIÓN Y SESIÓN
+        // ==========================================
+        async function iniciarSesion(e) {
+            e.preventDefault();
+            const username = document.getElementById('login_username').value;
+            const password = document.getElementById('login_password').value;
+
+            try {
+                const res = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    usuarioActual = data;
+                    document.getElementById('modal-login').classList.add('hidden');
+                    
+                    if (data.requiere_cambio_password) {
+                        document.getElementById('modal-cambio-pass').classList.remove('hidden');
+                    } else {
+                        localStorage.setItem('usuario_contracargos', JSON.stringify(data));
+                        configurarInterfazSesion();
+                    }
+                } else {
+                    alert(data.detail || "Error en inicio de sesión");
+                }
+            } catch (err) {
+                alert("Error de conexión al iniciar sesión.");
+            }
+        }
+
+        async function ejecutarCambioPassword(e) {
+            e.preventDefault();
+            const pass1 = document.getElementById('new_password').value;
+            const pass2 = document.getElementById('confirm_password').value;
+
+            if (pass1 !== pass2) {
+                alert("Las contraseñas no coinciden");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/usuarios/cambiar-password`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_id: usuarioActual.id, password_nueva: pass1 })
+                });
+
+                if (res.ok) {
+                    alert("Contraseña actualizada exitosamente.");
+                    usuarioActual.requiere_cambio_password = false;
+                    localStorage.setItem('usuario_contracargos', JSON.stringify(usuarioActual));
+                    document.getElementById('modal-cambio-pass').classList.add('hidden');
+                    configurarInterfazSesion();
+                } else {
+                    alert("Error al actualizar la contraseña");
+                }
+            } catch (err) {
+                alert("Error al conectar con la API");
+            }
+        }
+
+        function configurarInterfazSesion() {
+            if (!usuarioActual) return;
+
+            // Mostrar info header
+            document.getElementById('hdr-user-nombre').innerText = usuarioActual.nombre;
+            document.getElementById('hdr-user-rol').innerText = usuarioActual.rol;
+            document.getElementById('info-usuario-header').classList.remove('hidden');
+            document.getElementById('btn-logout').classList.remove('hidden');
+
+            // Mostrar/Ocultar tab de Gestión de Usuarios según Rol
+            const tabUsuarios = document.getElementById('tab-usuarios');
+            if (['SuperAdmin', 'Admin'].includes(usuarioActual.rol)) {
+                tabUsuarios.classList.remove('hidden');
+            } else {
+                tabUsuarios.classList.add('hidden');
+            }
+
+            // Aplicar permisos generales en UI (por si es Visor)
+            aplicarPermisosPorRol();
+        }
+
+        function aplicarPermisosPorRol() {
+            if (!usuarioActual) return;
+            const esVisor = usuarioActual.rol === 'Visor';
+
+            const btnRegistrar = document.getElementById('btn-registrar-contracargo');
+            if (btnRegistrar) btnRegistrar.disabled = esVisor;
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('usuario_contracargos');
+            usuarioActual = null;
+            location.reload();
+        }
+
+        async function crearNuevoUsuario(e) {
+            e.preventDefault();
+            const data = {
+                username: document.getElementById('new_user_username').value,
+                nombre: document.getElementById('new_user_nombre').value,
+                email: document.getElementById('new_user_email').value,
+                rol: document.getElementById('new_user_rol').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/usuarios/crear`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const resp = await res.json();
+                if (res.ok) {
+                    alert(`¡Usuario creado exitosamente!\n\nContraseña temporal: ${resp.password_temporal}`);
+                    document.getElementById('formUsuario').reset();
+                } else {
+                    alert("Error: " + resp.detail);
+                }
+            } catch (err) {
+                alert("Error de conexión al crear usuario");
+            }
+        }
+
+        // ==========================================
+        // FUNCIONALIDADES EXISTENTES DE CONTRACARGOS
+        // ==========================================
+
+        function cambiarTab(tab) {
+            ['registro', 'gestion', 'alertas', 'reportes', 'fraudes'].forEach(t => {
+                const sec = document.getElementById(`sec-${t}`);
+                const tabBtn = document.getElementById(`tab-${t}`);
+                if(sec) sec.classList.add('hidden');
+                if(tabBtn) tabBtn.className = "py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200";
+            });
+            const activeSec = document.getElementById(`sec-${tab}`);
+            const activeTab = document.getElementById(`tab-${tab}`);
+            if(activeSec) activeSec.classList.remove('hidden');
+            if(activeTab) activeTab.className = "py-2 px-4 rounded-t-lg font-medium bg-blue-600 text-white border-b-2 border-blue-400";
+        }
+
+        function toggleCasoBAC() {
+            const pasarela = document.getElementById('pasarela').value;
+            const boxCaso = document.getElementById('box-caso');
+            const inputCaso = document.getElementById('no_idcontracargo');
+            
+            if (pasarela === 'Neonet') {
+                boxCaso.style.opacity = '0.4';
+                inputCaso.value = '';
+                inputCaso.disabled = true;
+            } else {
+                boxCaso.style.opacity = '1';
+                inputCaso.disabled = false;
+            }
+        }
+
+        async function guardarContracargo() {
+            const data = {
+                pasarela: document.getElementById('pasarela').value,
+                no_idcontracargo: document.getElementById('no_idcontracargo').value || null,
+                no_orden: document.getElementById('no_orden').value,
+                correo_cliente: document.getElementById('correo_cliente').value,
+                tarjeta_mascarada: document.getElementById('tarjeta_mascarada').value,
+                monto: parseFloat(document.getElementById('monto').value),
+                fecha_transaccion: document.getElementById('fecha_transaccion').value,
+                fecha_contracargo: document.getElementById('fecha_contracargo').value,
+                unidad_negocio: document.getElementById('unidad_negocio').value,
+                metodo_pago: document.getElementById('metodo_pago').value,
+                estado_orden: document.getElementById('estado_orden').value,
+                estado_ocadmin: document.getElementById('estado_ocadmin').value,
+                autorizacion: document.getElementById('autorizacion').value,
+                tipo_contracargo: document.getElementById('tipo_contracargo').value,
+                observaciones: document.getElementById('observaciones').value || null
+            };
+
+            if (!data.no_orden || !data.correo_cliente || !data.tarjeta_mascarada || !data.monto || 
+                !data.fecha_transaccion || !data.fecha_contracargo || !data.unidad_negocio || 
+                !data.metodo_pago || !data.estado_ocadmin || !data.autorizacion || !data.tipo_contracargo) {
+                alert("Por favor complete todos los campos obligatorios.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/contracargos`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.ok) {
+                    alert("¡Contracargo registrado exitosamente!");
+                    document.getElementById('formContracargo').reset();
+                    toggleCasoBAC();
+                } else {
+                    const err = await res.json();
+                    alert("Error al registrar: " + JSON.stringify(err.detail));
+                }
+            } catch (e) {
+                alert("Error de conexión con la API");
+            }
+        }
+
+        async function cargarContracargos() {
+            const tbody = document.getElementById('tabla-contracargos');
+            tbody.innerHTML = '<tr><td colspan="13" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Cargando base de datos completa...</td></tr>';
+            
+            try {
+                const res = await fetch(`${API_URL}/contracargos`);
+                todosLosContracargos = await res.json();
+
+                poblarAniosDisponibles(todosLosContracargos);
+                renderizarTabla(todosLosContracargos);
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="13" class="p-4 text-center text-rose-400">Error al cargar registros desde la base de datos</td></tr>';
+            }
+        }
+
+       function poblarAniosDisponibles(datos) {
+            const selectAnio = document.getElementById('filtroAnio');
+            const valorActual = selectAnio.value;
+            
+            const anios = new Set();
+            datos.forEach(item => {
+                const fechaRef = item.fecha_contracargo || item.fecha_transaccion;
+                if (fechaRef) {
+                    const a = new Date(fechaRef).getFullYear();
+                    if (!isNaN(a)) anios.add(a);
+                }
+            });
+
+            const aniosOrdenados = Array.from(anios).sort((a, b) => b - a);
+            
+            selectAnio.innerHTML = '<option value="">Todos los Años</option>';
+            aniosOrdenados.forEach(a => {
+                selectAnio.innerHTML += `<option value="${a}">${a}</option>`;
+            });
+
+            selectAnio.value = valorActual;
+        }
+
+        function renderizarTabla(datos) {
+            const tbody = document.getElementById('tabla-contracargos');
+            
+            if (datos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="13" class="p-4 text-center text-slate-400">No hay registros que coincidan con los filtros.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = datos.map(item => `
+                <tr class="hover:bg-slate-750 transition border-b border-slate-700/50">
+                    <td class="p-3">
+                        <div class="font-bold text-slate-300">#${item.id}</div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${item.pasarela === 'BAC' ? 'bg-red-900/60 text-red-300' : 'bg-purple-900/60 text-purple-300'}">${item.pasarela}</span>
+                        <div class="text-xs text-slate-400 mt-0.5">${item.no_idcontracargo || 'N/A'}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="font-medium text-slate-200">${item.no_orden}</div>
+                        <div class="text-xs text-slate-400">${item.correo_cliente}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="font-mono text-xs text-slate-200">${item.tarjeta_mascarada}</div>
+                        <div class="text-xs text-slate-400">Auth: <span class="text-blue-300 font-semibold">${item.autorizacion}</span></div>
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-0.5 rounded text-xs font-semibold bg-slate-700 text-blue-300 border border-slate-600">${item.unidad_negocio || 'N/A'}</span>
+                        <div class="text-xs text-slate-400 mt-1">${item.metodo_pago || 'N/A'}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="text-xs font-semibold text-slate-300">${item.estado_orden}</div>
+                        <div class="text-xs text-amber-400/90">${item.estado_ocadmin || 'N/A'}</div>
+                    </td>
+                    <td class="p-3 font-semibold text-emerald-400 whitespace-nowrap">
+                        Q${parseFloat(item.monto || 0).toFixed(2)}
+                        <button onclick="editarMonto(${item.id}, ${item.monto})" title="Editar monto" class="ml-1 text-slate-400 hover:text-white text-xs">✏️</button>
+                    </td>
+                    <td class="p-3 text-xs text-slate-300 whitespace-nowrap">
+                        ${item.fecha_contracargo || 'N/A'}
+                    </td>
+                    <td class="p-3">
+                        <input type="date" value="${item.p_and_l || ''}" 
+                            onchange="actualizarFecha(${item.id}, 'p_and_l', this.value)"
+                            class="bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-cyan-300 font-medium focus:outline-none focus:border-cyan-500">
+                    </td>
+                    <td class="p-3">
+                        <input type="date" value="${item.fecha_info_enviada || ''}" 
+                            onchange="actualizarFecha(${item.id}, 'fecha_info_enviada', this.value)"
+                            class="bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-slate-300 focus:outline-none focus:border-blue-500">
+                    </td>
+                    <td class="p-3">
+                        <input type="date" value="${item.fecha_resolucion || ''}" 
+                            onchange="actualizarFecha(${item.id}, 'fecha_resolucion', this.value)"
+                            class="bg-slate-900 border border-slate-700 rounded px-1.5 py-1 text-xs text-slate-300 focus:outline-none focus:border-blue-500">
+                    </td>
+                    <td class="p-3">
+                        <input type="file" id="file_${item.id}" class="hidden" accept=".pdf,.png,.jpg,.jpeg,.zip" multiple onchange="subirEvidencia(${item.id})">
+                        ${item.archivo_evidencia ? 
+                            `<div class="flex flex-col gap-1">
+                                <a href="/static/evidencias/${item.archivo_evidencia}" download target="_blank" class="bg-emerald-700 hover:bg-emerald-600 text-white text-xs px-2 py-1 rounded flex items-center justify-center gap-1 font-semibold shadow transition">
+                                    <i class="fa-solid fa-file-arrow-down"></i> Descargar
+                                </a>
+                                <button onclick="document.getElementById('file_${item.id}').click()" class="bg-slate-700 hover:bg-slate-600 text-[10px] py-0.5 px-1 rounded text-slate-300 flex items-center justify-center gap-1">
+                                    <i class="fa-solid fa-plus"></i> Agregar más
+                                </button>
+                             </div>` : 
+                            `<button onclick="document.getElementById('file_${item.id}').click()" class="bg-slate-700 hover:bg-slate-600 text-xs px-2 py-1 rounded text-slate-200 flex items-center gap-1">
+                                <i class="fa-solid fa-paperclip"></i> Adjuntar
+                             </button>`
+                        }
+                    </td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${
+                            item.resolucion === 'Ganado' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' : 
+                            item.resolucion === 'Perdido' ? 'bg-rose-900/80 text-rose-300 border border-rose-700' : 
+                            'bg-amber-900/80 text-amber-300 border border-amber-700'
+                        }">
+                            ${item.resolucion || 'Pendiente'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-center space-x-1 whitespace-nowrap">
+                        <button onclick="actualizarResolucion(${item.id}, 'Ganado')" class="bg-emerald-600 hover:bg-emerald-500 text-xs px-2 py-1 rounded text-white shadow">Ganado</button>
+                        <button onclick="actualizarResolucion(${item.id}, 'Perdido')" class="bg-rose-600 hover:bg-rose-500 text-xs px-2 py-1 rounded text-white shadow">Perdido</button>
+                        <button onclick="actualizarResolucion(${item.id}, 'Pendiente')" class="bg-amber-600 hover:bg-amber-500 text-xs px-2 py-1 rounded text-white shadow">Pendiente</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        /* APLICAR FILTROS: ORDEN, AÑO, MES, PASARELA Y RESOLUCIÓN */
+        function aplicarFiltrosTabla() {
+            const orden = document.getElementById('filtroOrden').value.trim().toLowerCase();
+            const anio = document.getElementById('filtroAnio').value;
+            const mes = document.getElementById('filtroMes').value;
+            const pasarela = document.getElementById('filtroPasarela').value;
+            const resolucion = document.getElementById('filtroResolucion').value;
+
+            const datosFiltrados = todosLosContracargos.filter(item => {
+                const matchOrden = !orden || (item.no_orden && item.no_orden.toLowerCase().includes(orden));
+                const matchPasarela = !pasarela || item.pasarela === pasarela;
+                const matchResolucion = !resolucion || (item.resolucion || "Pendiente") === resolucion;
+
+                // Extraer Año y Mes de la fecha de contracargo o transacción
+                const fechaRef = item.fecha_contracargo || item.fecha_transaccion;
+                let matchAnio = true;
+                let matchMes = true;
+
+                if (fechaRef) {
+                    const d = new Date(fechaRef);
+                    if (!isNaN(d)) {
+                        if (anio) matchAnio = d.getFullYear().toString() === anio;
+                        if (mes) matchMes = (d.getMonth() + 1).toString() === mes;
+                    }
+                } else {
+                    if (anio || mes) return false;
+                }
+
+                return matchOrden && matchAnio && matchMes && matchPasarela && matchResolucion;
+            });
+
+            renderizarTabla(datosFiltrados);
+        }
+
+        function limpiarFiltros() {
+            document.getElementById('filtroPasarela').value = '';
+            document.getElementById('filtroPNL').value = '';
+            document.getElementById('filtroResolucion').value = '';
+            renderizarTabla(todosLosContracargos);
+        }
+
+        function descargarReporteExcel() {
+            const pasarela = document.getElementById('filtroPasarela').value;
+            const pnl = document.getElementById('filtroPNL').value;
+            
+            let url = `${API_URL}/contracargos/exportar-excel?`;
+            if (pasarela) url += `pasarela=${encodeURIComponent(pasarela)}&`;
+            if (pnl) url += `pnl=${encodeURIComponent(pnl)}`;
+
+            window.location.href = url;
+        }
+
+        // DESCARGAR MATRIZ DE REPORTES EXCEL
+        function descargarMatrizExcel() {
+            window.location.href = `${API_URL}/reportes/exportar-matriz-excel`;
+        }
+
+        async function actualizarFecha(id, campo, valor) {
+            try {
+                const payload = {};
+                payload[campo] = valor || null;
+
+                const res = await fetch(`${API_URL}/contracargos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) alert("Error al guardar el campo");
+            } catch (e) {
+                alert("Error de conexión al actualizar");
+            }
+        }
+
+        // FUNCIÓN JS ACTUALIZADA PARA ENVIAR MÚLTIPLES ARCHIVOS
+        async function subirEvidencia(id) {
+            const input = document.getElementById(`file_${id}`);
+            if (!input.files.length) return;
+
+            const formData = new FormData();
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append('archivos', input.files[i]);
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/contracargos/${id}/subir-evidencia`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (data.status === 'éxito') {
+                    cargarContracargos();
+                } else {
+                    alert("Error al subir evidencias: " + JSON.stringify(data.detail));
+                }
+            } catch (e) {
+                alert("Error de conexión al subir los archivos");
+            }
+        }
+
+        async function actualizarResolucion(id, resolucion) {
+            try {
+                const res = await fetch(`${API_URL}/contracargos/${id}/resolucion?resolucion=${resolucion}`, { method: 'PATCH' });
+                if (res.ok) cargarContracargos();
+            } catch (e) {
+                alert("Error al actualizar estado");
+            }
+        }
+
+        async function editarMonto(id, montoActual) {
+            const nuevoMonto = prompt("Ingrese el nuevo monto corregido (Q):", montoActual);
+            
+            if (nuevoMonto !== null && !isNaN(nuevoMonto) && nuevoMonto !== "") {
+                try {
+                    const res = await fetch(`${API_URL}/contracargos/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ monto: parseFloat(nuevoMonto) })
+                    });
+                    
+                    if (res.ok) {
+                        alert("Monto actualizado");
+                        cargarContracargos();
+                    }
+                } catch(e) {
+                    alert("Error al guardar el monto");
+                }
+            }
+        }
+
+        async function cargarAlertas() {
+            const cont = document.getElementById('contenedor-alertas');
+            cont.innerHTML = '<p class="text-slate-400">Cargando alertas...</p>';
+            try {
+                const res = await fetch(`${API_URL}/alertas/tarjetas-duplicadas`);
+                if (!res.ok) throw new Error("Error en la respuesta del servidor");
+                
+                const alertas = await res.json();
+                
+                if (!alertas || alertas.length === 0) {
+                    cont.innerHTML = '<div class="p-4 bg-slate-900/60 rounded-lg text-emerald-400">No se detectaron tarjetas duplicadas sospechosas.</div>';
+                    return;
+                }
+
+                cont.innerHTML = alertas.map(a => `
+                    <div class="p-4 bg-slate-900 border border-rose-900/50 rounded-xl flex justify-between items-center">
+                        <div>
+                            <div class="font-mono text-rose-300 font-bold">${a.tarjeta_mascarada}</div>
+                            <div class="text-xs text-slate-400">${a.total_casos} casos detectados para esta tarjeta</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-emerald-400 font-bold">Total: Q${parseFloat(a.monto_total || 0).toFixed(2)}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                cont.innerHTML = '<p class="text-rose-400">Error al cargar alertas</p>';
+            }
+        }
+
+        async function cargarReportes() {
+            const cont = document.getElementById('contenedor-reportes');
+            cont.innerHTML = '<p class="text-slate-400 col-span-2 p-4">Cargando reportes...</p>';
+            
+            try {
+                const res = await fetch(`${API_URL}/reportes/cuatro-semanas`);
+                if (!res.ok) throw new Error("Error al obtener matriz");
+                
+                const matriz = await res.json();
+
+                if (!matriz || Object.keys(matriz).length === 0) {
+                    cont.innerHTML = '<p class="text-slate-400 col-span-2 p-4">Sin información para reportes.</p>';
+                    return;
+                }
+
+                // Obtener la lista unificada de semanas
+                let semanas = [];
+                if (matriz["BAC"] && matriz["BAC"].semanas) {
+                    semanas = matriz["BAC"].semanas;
+                } else if (matriz["Neonet"] && matriz["Neonet"].semanas) {
+                    semanas = matriz["Neonet"].semanas;
+                }
+
+                const numSemanas = semanas.length || 1;
+
+                // Helper para formato de moneda (Q5,549.00 o espacio en blanco si es 0)
+                const formatMonto = (v) => v > 0 
+                    ? new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(v).replace('GTQ', 'Q') 
+                    : '';
+
+                // Helper para formato de cantidad
+                const formatCant = (v) => v > 0 ? v : '';
+
+                // 1. Construir estructura para el Consolidado General (BAC + Neonet)
+                const estadosValidos = ["Entregada", "No entregado"];
+                const filasConsolidado = estadosValidos.map(estado => {
+                    const montosGeneral = {};
+                    const cantidadesGeneral = {};
+
+                    semanas.forEach(sem => {
+                        let sumaMonto = 0;
+                        let sumaCant = 0;
+
+                        ["BAC", "Neonet"].forEach(p => {
+                            if (matriz[p] && matriz[p].filas) {
+                                const match = matriz[p].filas.find(f => f.estado_orden.toLowerCase() === estado.toLowerCase());
+                                if (match) {
+                                    sumaMonto += match.montos[sem] || 0;
+                                    sumaCant += match.cantidades[sem] || 0;
+                                }
+                            }
+                        });
+
+                        montosGeneral[sem] = sumaMonto;
+                        cantidadesGeneral[sem] = sumaCant;
+                    });
+
+                    return {
+                        estado_orden: estado,
+                        montos: montosGeneral,
+                        cantidades: cantidadesGeneral
+                    };
+                });
+
+                // Clonar la matriz y adjuntar el Consolidado
+                const matrizCompleta = {
+                    ...matriz,
+                    "Consolidado General": {
+                        semanas: semanas,
+                        filas: filasConsolidado
+                    }
+                };
+
+                // 2. Renderizar las 3 Tablas (BAC, Neonet, Consolidado)
+                let html = '';
+
+                for (const tituloTab in matrizCompleta) {
+                    const dataTab = matrizCompleta[tituloTab];
+                    const filasData = dataTab.filas || [];
+
+                    html += `
+                        <div class="bg-slate-900/90 p-5 rounded-xl border border-slate-800/80 mb-6 shadow-xl">
+                            <h3 class="text-base font-bold text-slate-100 mb-4 tracking-wide">${tituloTab}</h3>
+                            
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left text-slate-200 border-collapse border border-slate-800">
+                                    <!-- ENCABEZADOS DE DOBLE NIVEL -->
+                                    <thead>
+                                        <tr class="bg-[#0f1f2e] text-slate-300 font-semibold border-b border-slate-800">
+                                            <th rowspan="2" class="p-3 border-r border-slate-800 w-1/5 uppercase text-[11px] tracking-wider">${tituloTab}</th>
+                                            <th colspan="${numSemanas}" class="p-2 text-center border-r border-slate-800 bg-[#0a2928] text-emerald-400 font-bold">Monto Enviado</th>
+                                            <th colspan="${numSemanas}" class="p-2 text-center bg-[#0d2238] text-blue-400 font-bold">Cantidad de ordenes</th>
+                                        </tr>
+                                        <tr class="bg-[#122536] text-slate-300 font-semibold border-b border-slate-800">
+                                            <!-- Semanas para Monto -->
+                                            ${semanas.map(s => `<th class="p-2 text-center border-r border-slate-800 font-mono">${s}</th>`).join('')}
+                                            <!-- Semanas para Cantidad -->
+                                            ${semanas.map((s, idx) => `
+                                                <th class="p-2 text-center ${idx < numSemanas - 1 ? 'border-r border-slate-800' : ''} font-mono">${s}</th>
+                                            `).join('')}
+                                        </tr>
+                                    </thead>
+
+                                    <!-- CUERPO DE LA TABLA -->
+                                    <tbody class="divide-y divide-slate-800/60 bg-[#09131d]">
+                                        ${filasData.map(f => `
+                                            <tr class="hover:bg-slate-800/40 transition-colors">
+                                                <!-- Nombre del Estado -->
+                                                <td class="p-3 font-medium border-r border-slate-800 text-slate-300">${f.estado_orden}</td>
+                                                
+                                                <!-- Celdas de Montos -->
+                                                ${semanas.map(s => `
+                                                    <td class="p-3 text-center border-r border-slate-800 font-medium text-emerald-400">
+                                                        ${formatMonto(f.montos[s])}
+                                                    </td>
+                                                `).join('')}
+
+                                                <!-- Celdas de Cantidades -->
+                                                ${semanas.map((s, idx) => `
+                                                    <td class="p-3 text-center ${idx < numSemanas - 1 ? 'border-r border-slate-800' : ''} font-medium text-slate-200">
+                                                        ${formatCant(f.cantidades[s])}
+                                                    </td>
+                                                `).join('')}
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                cont.innerHTML = html;
+
+            } catch(e) {
+                console.error("Error en reporte:", e);
+                cont.innerHTML = '<p class="text-rose-400 col-span-2 p-4">Error al cargar reportes</p>';
+            }
+        }
+        async function cargarFraudesPreventivos() {
+            const tbody = document.getElementById('tabla-fraudes-drive');
+            tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Actualizando match con la BD...</td></tr>';
+            
+            try {
+                const res = await fetch(`${API_URL}/fraudes-preventivos`);
+                todosLosFraudesDrive = await res.json();
+
+                renderizarTablaFraudes(todosLosFraudesDrive);
+
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-rose-400">Error al realizar la sincronización.</td></tr>';
+            }
+        }
+
+        function renderizarTablaFraudes(datos) {
+            const tbody = document.getElementById('tabla-fraudes-drive');
+
+            if (!datos || datos.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400">No hay datos para mostrar.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = datos.map(item => {
+                const esRecibido = item.estatus_contracargo === "Contracargo Recibido";
+                const monto = parseFloat(item.total_orden) || 0;
+
+                return `
+                    <tr class="hover:bg-slate-750 transition border-b border-slate-700/50">
+                        <td class="p-3 font-bold text-slate-200">#${item.id_orden}</td>
+                        <td class="p-3">
+                            <div class="font-medium text-slate-200">${item.nombre_cliente || 'N/A'}</div>
+                            <div class="text-xs text-slate-400">${item.correo_cliente || 'N/A'}</div>
+                        </td>
+                        <td class="p-3 font-mono text-xs text-slate-300">${item.tarjeta || 'N/A'}</td>
+                        <td class="p-3 font-semibold text-emerald-400">Q${monto.toFixed(2)}</td>
+                        <td class="p-3 text-xs text-slate-400">${item.fecha_colocacion || 'N/A'}</td>
+                        <td class="p-3 text-center">
+                            ${esRecibido ? 
+                                `<span class="px-3 py-1 rounded-full text-xs font-bold bg-rose-900/80 text-rose-300 border border-rose-700 inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-exclamation"></i> Contracargo Recibido
+                                 </span>` : 
+                                `<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-900/80 text-emerald-300 border border-emerald-700 inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-shield"></i> Sin Contracargo
+                                 </span>`
+                            }
+                        </td>
+                        <td class="p-3 text-center font-mono text-xs ${esRecibido ? 'text-rose-400 font-bold' : 'text-slate-500'}">
+                            ${item.fecha_contracargo_sistema}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /* BÚSQUEDA INSTANTÁNEA POR ORDEN EN MONITOREO */
+        function filtrarTablaFraudes() {
+            const query = document.getElementById('filtroOrdenFraudes').value.trim().toLowerCase();
+            const filtrados = todosLosFraudesDrive.filter(item => {
+                return !query || (item.id_orden && item.id_orden.toString().toLowerCase().includes(query));
+            });
+            renderizarTablaFraudes(filtrados);
+        }
+    </script>
+</body>
+</html>
