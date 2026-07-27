@@ -32,8 +32,14 @@ class CambiarPasswordReq(BaseModel):
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-GOOGLE_CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
-NOMBRE_HOJA_DRIVE = "Reporte de Ordenes con Fraude"
+# Ruta de Secret Files en Render
+RENDER_SECRET_PATH = "/etc/secrets/credentials.json"
+
+# Si existe el archivo en Render lo usa; si no, usa la ruta local
+if os.path.exists(RENDER_SECRET_PATH):
+    GOOGLE_CREDENTIALS_FILE = RENDER_SECRET_PATH
+else:
+    GOOGLE_CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -575,7 +581,7 @@ def obtener_fraudes_preventivos():
     try:
         # 1. Conexión con Google Sheets
         gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
-        sheet = gc.open(NOMBRE_HOJA_DRIVE).worksheet("Sheet1")
+        sheet = gc.open("Reporte de Ordenes con Fraude").worksheet("Sheet1")
         filas = sheet.get_all_values()
 
         if not filas:
