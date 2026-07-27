@@ -471,14 +471,15 @@
 
         // INICIALIZACIÓN
         window.addEventListener('DOMContentLoaded', () => {
-            const sesionGuardada = localStorage.getItem('usuario_contracargos');
-            if (sesionGuardada) {
-                usuarioActual = JSON.parse(sesionGuardada);
-                configurarInterfazSesion();
-            } else {
-                document.getElementById('modal-login').classList.remove('hidden');
-            }
-        });
+    const sesionGuardada = localStorage.getItem('usuario_contracargos');
+    if (sesionGuardada) {
+        usuarioActual = JSON.parse(sesionGuardada);
+        document.getElementById('modal-login').classList.add('hidden'); // Oculta el login
+        configurarInterfazSesion();
+    } else {
+        document.getElementById('modal-login').classList.remove('hidden');
+    }
+});
 
         // ==========================================
         // AUTENTICACIÓN Y SESIÓN
@@ -613,17 +614,24 @@
         // ==========================================
 
         function cambiarTab(tab) {
-            ['registro', 'gestion', 'alertas', 'reportes', 'fraudes'].forEach(t => {
-                const sec = document.getElementById(`sec-${t}`);
-                const tabBtn = document.getElementById(`tab-${t}`);
-                if(sec) sec.classList.add('hidden');
-                if(tabBtn) tabBtn.className = "py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200";
-            });
-            const activeSec = document.getElementById(`sec-${tab}`);
-            const activeTab = document.getElementById(`tab-${tab}`);
-            if(activeSec) activeSec.classList.remove('hidden');
-            if(activeTab) activeTab.className = "py-2 px-4 rounded-t-lg font-medium bg-blue-600 text-white border-b-2 border-blue-400";
+    ['registro', 'gestion', 'alertas', 'reportes', 'fraudes', 'usuarios'].forEach(t => {
+        const sec = document.getElementById(`sec-${t}`);
+        const tabBtn = document.getElementById(`tab-${t}`);
+        if(sec) sec.classList.add('hidden');
+        if(tabBtn) tabBtn.className = "py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200";
+    });
+    
+    const activeSec = document.getElementById(`sec-${tab}`);
+    const activeTab = document.getElementById(`tab-${tab}`);
+    if(activeSec) activeSec.classList.remove('hidden');
+    if(activeTab) {
+        if(tab === 'usuarios') {
+            activeTab.className = "py-2 px-4 rounded-t-lg font-medium text-amber-400 border-b-2 border-amber-400 bg-amber-950/30";
+        } else {
+            activeTab.className = "py-2 px-4 rounded-t-lg font-medium bg-blue-600 text-white border-b-2 border-blue-400";
         }
+    }
+}
 
         function toggleCasoBAC() {
             const pasarela = document.getElementById('pasarela').value;
