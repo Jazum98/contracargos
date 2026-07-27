@@ -579,7 +579,14 @@ def obtener_fraudes_preventivos():
     si ya recibieron contracargo y la fecha exacta registrada en la BD.
     """
     try:
-        # 1. Conexión con Google Sheets
+        # 1. Verificar si existe el archivo de credenciales de Google
+        if not os.path.exists(GOOGLE_CREDENTIALS_FILE):
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Archivo de credenciales no encontrado en {GOOGLE_CREDENTIALS_FILE}"
+            )
+
+        # Conexión con Google Sheets
         gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
         sheet = gc.open("Reporte de Ordenes con Fraude").worksheet("Sheet1")
         filas = sheet.get_all_values()
@@ -595,16 +602,18 @@ def obtener_fraudes_preventivos():
         cursor = conn.cursor()
         cursor.execute("SELECT no_orden, fecha_contracargo FROM contracargos;")
         
-        # Mapeo: {'no_orden': 'fecha_contracargo'}
         mapa_contracargos = {}
+        # CORRECCIÓN AQUÍ: Se accede por índices de posición [0] y [1] para evitar caídas
         for row in cursor.fetchall():
-            no_orden_str = str(row['no_orden']).strip()
-            fecha_val = str(row['fecha_contracargo']) if row.get('fecha_contracargo') else "Registrado"
-            mapa_contracargos[no_orden_str] = fecha_val
+            no_orden_str = str(row[0]).strip() if row[0] is not None else ""
+            fecha_val = str(row[1]) if len(row) > 1 and row[1] else "Registrado"
+            if no_orden_str:
+                mapa_contracargos[no_orden_str] = fecha_val
 
         cursor.close()
         conn.close()
 
+        # 3. Mapear los datos de Sheets con la BD
         resultado = []
         for fila in datos_filas:
             row = {encabezados[i]: fila[i] for i in range(min(len(encabezados), len(fila)))}
@@ -629,5 +638,8 @@ def obtener_fraudes_preventivos():
 
         return resultado
 
+    except HTTPException:
+        raise
     except Exception as e:
+        print(f"Error crítico en /api/fraudes-preventivos: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error al sincronizar Google Sheets: {str(e)}")
