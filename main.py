@@ -583,13 +583,17 @@ def obtener_fraudes_preventivos():
         
         if google_json_env:
             creds_dict = json.loads(google_json_env)
+            # REPARACIÓN CLAVE: Corregimos el formateo de los saltos de línea si vienen escapados
+            if "private_key" in creds_dict:
+                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
             gc = gspread.service_account_from_dict(creds_dict)
         elif os.path.exists(GOOGLE_CREDENTIALS_FILE):
             gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
         else:
             raise HTTPException(
                 status_code=500, 
-                detail="No se encontraron credenciales de Google Sheets (ni archivo ni variable ENV)."
+                detail="No se encontraron credenciales de Google Sheets."
             )
 
         # 2. Conectar a la hoja
