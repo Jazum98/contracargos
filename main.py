@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import gspread
+import json
 
 class LoginRequest(BaseModel):
     username: str
@@ -574,20 +575,24 @@ def reporte_matriz():
 @app.get("/api/fraudes-preventivos")
 def obtener_fraudes_preventivos():
     """
-    Lee exclusivamente la pestaña 'Sheet1' de Google Sheets, realiza un cruce
-    con la tabla local 'contracargos' por el número de orden y devuelve
-    si ya recibieron contracargo y la fecha exacta registrada en la BD.
+    Lee la pestaña 'Sheet1' usando la variable de entorno GOOGLE_CREDENTIALS_JSON o el archivo local.
     """
     try:
-        # 1. Verificar si existe el archivo de credenciales de Google
-        if not os.path.exists(GOOGLE_CREDENTIALS_FILE):
+        # 1. Intentar cargar credenciales desde la Variable de Entorno de Render
+        google_json_env = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+        
+        if google_json_env:
+            creds_dict = json.loads(google_json_env)
+            gc = gspread.service_account_from_dict(creds_dict)
+        elif os.path.exists(GOOGLE_CREDENTIALS_FILE):
+            gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
+        else:
             raise HTTPException(
                 status_code=500, 
-                detail=f"Archivo de credenciales no encontrado en {GOOGLE_CREDENTIALS_FILE}"
+                detail="No se encontraron credenciales de Google Sheets (ni archivo ni variable ENV)."
             )
 
-        # Conexión con Google Sheets
-        gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
+        # 2. Conectar a la hoja
         sheet = gc.open("Reporte de Ordenes con Fraude").worksheet("Sheet1")
         filas = sheet.get_all_values()
 
@@ -597,13 +602,12 @@ def obtener_fraudes_preventivos():
         encabezados = filas[0]
         datos_filas = filas[1:]
 
-        # 2. Consultar contracargos existentes en la base de datos local
+        # 3. Base de datos local
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT no_orden, fecha_contracargo FROM contracargos;")
         
         mapa_contracargos = {}
-        # CORRECCIÓN AQUÍ: Se accede por índices de posición [0] y [1] para evitar caídas
         for row in cursor.fetchall():
             no_orden_str = str(row[0]).strip() if row[0] is not None else ""
             fecha_val = str(row[1]) if len(row) > 1 and row[1] else "Registrado"
@@ -613,7 +617,7 @@ def obtener_fraudes_preventivos():
         cursor.close()
         conn.close()
 
-        # 3. Mapear los datos de Sheets con la BD
+        # 4. Mapear datos
         resultado = []
         for fila in datos_filas:
             row = {encabezados[i]: fila[i] for i in range(min(len(encabezados), len(fila)))}
