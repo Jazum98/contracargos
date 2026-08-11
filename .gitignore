@@ -1,0 +1,17 @@
+# Archivos de credenciales y secretos de Google / Entorno
+credentials.json
+*.json
+.env
+
+# Entornos virtuales de Python
+venv/
+env/
+.venv/
+
+# Archivos temporales y de caché de Python
+__pycache__/
+*.pyc
+
+# Archivos de evidencias subidas por usuarios (opcional, si no quieres subirlos a Git)
+static/evidencias/*
+!static/evidencias/.gitkeep
