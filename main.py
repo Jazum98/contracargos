@@ -28,6 +28,10 @@ class CambiarPasswordReq(BaseModel):
     user_id: int
     password_nueva: str
 
+class ActualizarUsuarioReq(BaseModel):
+    rol: Optional[str] = None
+    activo: Optional[bool] = None
+
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -170,6 +174,81 @@ def crear_usuario(datos: CrearUsuarioReq):
         cursor.close()
         conn.close()
         raise HTTPException(status_code=400, detail=f"El usuario o correo ya existe o hubo un error: {str(e)}")
+
+@app.get("/api/usuarios")
+def listar_usuarios():
+    """
+    Obtiene el listado completo de usuarios registrados para el panel de administración.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Se omiten las contraseñas por seguridad
+        cursor.execute("""
+            SELECT id, username, nombre, email, rol, COALESCE(activo, TRUE) as activo 
+            FROM usuarios 
+            ORDER BY id DESC;
+        """)
+        usuarios = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return usuarios
+    except Exception as e:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Error al obtener usuarios: {str(e)}")
+
+@app.put("/api/usuarios/{user_id}")
+def actualizar_usuario(user_id: int, datos: ActualizarUsuarioReq):
+    """
+    Permite cambiar el rol y/o activar/desactivar un usuario según su ID.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    updates = []
+    values = []
+
+    if datos.rol is not None:
+        updates.append("rol = %s")
+        values.append(datos.rol)
+
+    if datos.activo is not None:
+        updates.append("activo = %s")
+        values.append(datos.activo)
+
+    if not updates:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=400, detail="No se enviaron datos para actualizar.")
+
+    values.append(user_id)
+    query = f"UPDATE usuarios SET {', '.join(updates)} WHERE id = %s RETURNING id, username, nombre, email, rol;"
+
+    try:
+        cursor.execute(query, tuple(values))
+        usuario_actualizado = cursor.fetchone()
+
+        if not usuario_actualizado:
+            cursor.close()
+            conn.close()
+            raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {
+            "status": "exito",
+            "mensaje": "Usuario actualizado correctamente",
+            "usuario": usuario_actualizado
+        }
+    except Exception as e:
+        conn.rollback()
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar usuario: {str(e)}")
+
+
 
 @app.post("/api/usuarios/cambiar-password")
 def cambiar_password(datos: CambiarPasswordReq):
