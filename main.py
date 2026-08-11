@@ -652,9 +652,6 @@ def obtener_fraudes_preventivos():
         print(f"Error crítico en /api/fraudes-preventivos: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error al sincronizar Google Sheets: {str(e)}")
 
-
-# --- NUEVAS RUTAS Y FUNCIONALIDADES ---
-
 class ResetPasswordReq(BaseModel):
     user_id: int
     password_actual: str
