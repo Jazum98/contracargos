@@ -578,26 +578,47 @@ def obtener_fraudes_preventivos():
     Lee la pestaña 'Sheet1' usando la variable de entorno GOOGLE_CREDENTIALS_JSON o el archivo local.
     """
     try:
-        # 1. Intentar cargar credenciales desde la Variable de Entorno de Render
+        # 1. Intentar cargar credenciales
         google_json_env = os.environ.get("GOOGLE_CREDENTIALS_JSON")
         
         if google_json_env:
-            creds_dict = json.loads(google_json_env)
-            # REPARACIÓN CLAVE: Corregimos el formateo de los saltos de línea si vienen escapados
+            try:
+                creds_dict = json.loads(google_json_env)
+            except Exception as e_json:
+                raise HTTPException(status_code=500, detail=f"JSON corrupto en variable de entorno: {str(e_json)}")
+                
             if "private_key" in creds_dict:
                 creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
             
-            gc = gspread.service_account_from_dict(creds_dict)
+            try:
+                gc = gspread.service_account_from_dict(creds_dict)
+            except Exception as e_auth:
+                raise HTTPException(status_code=500, detail=f"Fallo de autenticación con JSON de entorno: {str(e_auth)}")
+                
         elif os.path.exists(GOOGLE_CREDENTIALS_FILE):
-            gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
+            try:
+                gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
+            except Exception as e_file:
+                raise HTTPException(status_code=500, detail=f"Fallo de autenticación con credentials.json local: {str(e_file)}")
         else:
             raise HTTPException(
                 status_code=500, 
-                detail="No se encontraron credenciales de Google Sheets."
+                detail="No se encontró credentials.json local ni la variable GOOGLE_CREDENTIALS_JSON en Render."
             )
 
-        # 2. Conectar a la hoja
-        sheet = gc.open("Reporte de Ordenes con Fraude").worksheet("Sheet1")
+        # 2. Conectar a la hoja de Google Sheets
+        try:
+            sheet = gc.open("Reporte de Ordenes con Fraude").worksheet("Sheet1")
+        except gspread.exceptions.SpreadsheetNotFound:
+            raise HTTPException(
+                status_code=500, 
+                detail="No se encontró el documento 'Reporte de Ordenes con Fraude'. Verifica que compartiste la hoja con el correo (client_email) de la nueva credencial."
+            )
+        except gspread.exceptions.WorksheetNotFound:
+            raise HTTPException(status_code=500, detail="No existe la pestaña llamada 'Sheet1' en el documento.")
+        except Exception as e_gs:
+            raise HTTPException(status_code=500, detail=f"Error al abrir Google Sheets: {str(e_gs)}")
+
         filas = sheet.get_all_values()
 
         if not filas:
@@ -606,20 +627,23 @@ def obtener_fraudes_preventivos():
         encabezados = filas[0]
         datos_filas = filas[1:]
 
-        # 3. Base de datos local
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT no_orden, fecha_contracargo FROM contracargos;")
-        
-        mapa_contracargos = {}
-        for row in cursor.fetchall():
-            no_orden_str = str(row[0]).strip() if row[0] is not None else ""
-            fecha_val = str(row[1]) if len(row) > 1 and row[1] else "Registrado"
-            if no_orden_str:
-                mapa_contracargos[no_orden_str] = fecha_val
+        # 3. Base de datos
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT no_orden, fecha_contracargo FROM contracargos;")
+            
+            mapa_contracargos = {}
+            for row in cursor.fetchall():
+                no_orden_str = str(row[0]).strip() if row[0] is not None else ""
+                fecha_val = str(row[1]) if len(row) > 1 and row[1] else "Registrado"
+                if no_orden_str:
+                    mapa_contracargos[no_orden_str] = fecha_val
 
-        cursor.close()
-        conn.close()
+            cursor.close()
+            conn.close()
+        except Exception as e_db:
+            raise HTTPException(status_code=500, detail=f"Error al consultar la Base de Datos: {str(e_db)}")
 
         # 4. Mapear datos
         resultado = []
@@ -649,9 +673,9 @@ def obtener_fraudes_preventivos():
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error crítico en /api/fraudes-preventivos: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error al sincronizar Google Sheets: {str(e)}")
-
+        print(f"Error inesperado en /api/fraudes-preventivos: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error inesperado: {str(e)}")
+    
 class ResetPasswordReq(BaseModel):
     user_id: int
     password_actual: str
