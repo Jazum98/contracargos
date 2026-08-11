@@ -28,10 +28,6 @@ class CambiarPasswordReq(BaseModel):
     user_id: int
     password_nueva: str
 
-class ActualizarUsuarioReq(BaseModel):
-    rol: Optional[str] = None
-    activo: Optional[bool] = None
-
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -174,81 +170,6 @@ def crear_usuario(datos: CrearUsuarioReq):
         cursor.close()
         conn.close()
         raise HTTPException(status_code=400, detail=f"El usuario o correo ya existe o hubo un error: {str(e)}")
-
-@app.get("/api/usuarios")
-def listar_usuarios():
-    """
-    Obtiene el listado completo de usuarios registrados para el panel de administración.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    try:
-        # Se omiten las contraseñas por seguridad
-        cursor.execute("""
-            SELECT id, username, nombre, email, rol, COALESCE(activo, TRUE) as activo 
-            FROM usuarios 
-            ORDER BY id DESC;
-        """)
-        usuarios = cursor.fetchall()
-        cursor.close()
-        conn.close()
-        return usuarios
-    except Exception as e:
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=500, detail=f"Error al obtener usuarios: {str(e)}")
-
-@app.put("/api/usuarios/{user_id}")
-def actualizar_usuario(user_id: int, datos: ActualizarUsuarioReq):
-    """
-    Permite cambiar el rol y/o activar/desactivar un usuario según su ID.
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    updates = []
-    values = []
-
-    if datos.rol is not None:
-        updates.append("rol = %s")
-        values.append(datos.rol)
-
-    if datos.activo is not None:
-        updates.append("activo = %s")
-        values.append(datos.activo)
-
-    if not updates:
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=400, detail="No se enviaron datos para actualizar.")
-
-    values.append(user_id)
-    query = f"UPDATE usuarios SET {', '.join(updates)} WHERE id = %s RETURNING id, username, nombre, email, rol;"
-
-    try:
-        cursor.execute(query, tuple(values))
-        usuario_actualizado = cursor.fetchone()
-
-        if not usuario_actualizado:
-            cursor.close()
-            conn.close()
-            raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return {
-            "status": "exito",
-            "mensaje": "Usuario actualizado correctamente",
-            "usuario": usuario_actualizado
-        }
-    except Exception as e:
-        conn.rollback()
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=500, detail=f"Error al actualizar usuario: {str(e)}")
-
-
 
 @app.post("/api/usuarios/cambiar-password")
 def cambiar_password(datos: CambiarPasswordReq):
@@ -730,3 +651,88 @@ def obtener_fraudes_preventivos():
     except Exception as e:
         print(f"Error crítico en /api/fraudes-preventivos: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error al sincronizar Google Sheets: {str(e)}")
+
+
+# --- NUEVAS RUTAS Y FUNCIONALIDADES ---
+
+class ResetPasswordReq(BaseModel):
+    user_id: int
+    password_actual: str
+    password_nueva: str
+
+@app.delete("/api/contracargos/{id_registro}")
+def eliminar_contracargo(id_registro: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT archivo_evidencia FROM contracargos WHERE id = %s;", (id_registro,))
+    registro = cursor.fetchone()
+    
+    if not registro:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="Registro no encontrado")
+        
+    archivo = registro["archivo_evidencia"]
+    if archivo:
+        ruta_archivo = os.path.join(STATIC_DIR, "evidencias", archivo)
+        if os.path.exists(ruta_archivo):
+            try:
+                os.remove(ruta_archivo)
+            except Exception as e:
+                print(f"No se pudo eliminar el archivo de evidencia: {str(e)}")
+
+    cursor.execute("DELETE FROM contracargos WHERE id = %s;", (id_registro,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"status": "exito", "mensaje": f"Contracargo {id_registro} eliminado correctamente."}
+
+@app.get("/api/usuarios")
+def listar_usuarios():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username, nombre, email, rol, requiere_cambio_password FROM usuarios ORDER BY id ASC;")
+    usuarios = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return usuarios
+
+@app.delete("/api/usuarios/{user_id}")
+def eliminar_usuario(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM usuarios WHERE id = %s;", (user_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    cursor.execute("DELETE FROM usuarios WHERE id = %s;", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"status": "exito", "mensaje": f"Usuario {user_id} eliminado correctamente."}
+
+@app.post("/api/usuarios/resetear-password")
+def resetear_password_propia(datos: ResetPasswordReq):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password FROM usuarios WHERE id = %s;", (datos.user_id,))
+    user = cursor.fetchone()
+    
+    if not user:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+    if user["password"] != datos.password_actual:
+        cursor.close()
+        conn.close()
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
+        
+    cursor.execute("UPDATE usuarios SET password = %s, requiere_cambio_password = FALSE WHERE id = %s;", (datos.password_nueva, datos.user_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"status": "exito", "mensaje": "Contraseña cambiada exitosamente."}

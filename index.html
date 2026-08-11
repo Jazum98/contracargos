@@ -13,7 +13,7 @@
     <!-- MODAL DE LOGIN (PANTALLA INICIAL)          -->
     <!-- ========================================== -->
 
-<div id="modal-login" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
+    <div id="modal-login" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md">
         <div class="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl w-full max-w-md">
             <div class="text-center mb-6">
                 <div class="inline-block bg-blue-600/20 p-4 rounded-full text-blue-400 mb-3">
@@ -244,7 +244,7 @@
                 </div>
 
                 <div class="md:col-span-3 flex justify-end mt-2">
-                    <button type="button" onclick="guardarContracargo()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-200">
+                    <button type="button" id="btn-registrar-contracargo" onclick="guardarContracargo()" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-lg shadow-lg transition duration-200">
                         <i class="fa-solid fa-floppy-disk mr-2"></i>Registrar Contracargo
                     </button>
                 </div>
@@ -264,7 +264,7 @@
                 </button>
             </div>
 
-            <!-- PANEL DE FILTROS AHORA REORGANIZADO EN 2 FILAS LIMPIAS -->
+            <!-- PANEL DE FILTROS REORGANIZADO -->
             <div class="bg-slate-900/80 rounded-xl p-4 mb-4 border border-slate-700 space-y-3">
                 <!-- Fila 1: Búsqueda principal -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -373,7 +373,6 @@
                     <p class="text-xs text-slate-400 mt-1">Matriz Consolidada de Contracargos</p>
                 </div>
                 
-                <!-- BOTÓN DE DESCARGA EXCEL DE LA MATRIZ -->
                 <button onclick="descargarMatrizExcel()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-lg flex items-center gap-2 shadow-lg transition-all">
                     <i class="fa-solid fa-file-excel text-sm"></i> Descargar Reporte (Excel)
                 </button>
@@ -383,7 +382,7 @@
             </div>
         </section>
 
-        <!-- 🟢 SECCIÓN 5: MONITOREO PREVENTIVO DE FRAUDES (DRIVE) -->
+        <!-- SECCIÓN 5: MONITOREO PREVENTIVO DE FRAUDES (DRIVE) -->
         <section id="sec-fraudes" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
             <div class="flex justify-between items-center mb-6">
                 <div>
@@ -426,38 +425,72 @@
             </div>
         </section>
         
-        <!-- SECCIÓN 6: NUEVA PESTAÑA GESTIÓN DE USUARIOS (SOLO SUPERADMIN / ADMIN) -->
-        <section id="sec-usuarios" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl">
-            <h2 class="text-xl font-bold text-amber-400 mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-user-plus"></i> Crear Nuevo Usuario del Sistema
-            </h2>
-            <form id="formUsuario" onsubmit="crearNuevoUsuario(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mb-8 bg-slate-900 p-5 rounded-xl border border-slate-700">
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Username (Usuario)</label>
-                    <input type="text" id="new_user_username" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Ej: mlopez">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nombre Completo</label>
-                    <input type="text" id="new_user_nombre" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Ej: Maria Lopez">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Correo Electrónico</label>
-                    <input type="email" id="new_user_email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="maria@empresa.com">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Rol de Acceso</label>
-                    <select id="new_user_rol" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500">
-                        <option value="Analista">Analista (Creación y Gestión)</option>
-                        <option value="Visor">Visor (Solo Lectura y Exportación)</option>
-                        <option value="Admin">Admin (Administrador completo)</option>
-                    </select>
-                </div>
-                <div class="md:col-span-2 flex justify-end mt-2">
-                    <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg transition">
-                        <i class="fa-solid fa-user-check mr-2"></i>Crear Usuario
+        <!-- SECCIÓN 6: GESTIÓN Y CONTROL DE USUARIOS (SOLO SUPERADMIN / ADMIN) -->
+        <section id="sec-usuarios" class="hidden bg-slate-800 rounded-xl p-6 border border-slate-700 shadow-xl space-y-8">
+            
+            <!-- BLOQUE 1: CREAR NUEVO USUARIO -->
+            <div>
+                <h2 class="text-xl font-bold text-amber-400 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus"></i> Crear Nuevo Usuario del Sistema
+                </h2>
+                <form id="formUsuario" onsubmit="crearNuevoUsuario(event)" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl bg-slate-900 p-5 rounded-xl border border-slate-700">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Username (Usuario)</label>
+                        <input type="text" id="new_user_username" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Ej: mlopez">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nombre Completo</label>
+                        <input type="text" id="new_user_nombre" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="Ej: Maria Lopez">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Correo Electrónico</label>
+                        <input type="email" id="new_user_email" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500" placeholder="maria@empresa.com">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Rol de Acceso</label>
+                        <select id="new_user_rol" required class="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-slate-200 focus:outline-none focus:border-amber-500">
+                            <option value="Analista">Analista (Creación y Gestión)</option>
+                            <option value="Visor">Visor (Solo Lectura y Exportación)</option>
+                            <option value="Admin">Admin (Administrador completo)</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2 flex justify-end mt-2">
+                        <button type="submit" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-6 rounded-lg shadow-lg transition">
+                            <i class="fa-solid fa-user-check mr-2"></i>Crear Usuario
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- BLOQUE 2: TABLA DE CONTROL DE USUARIOS REGISTRADOS -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-amber-400 flex items-center gap-2">
+                        <i class="fa-solid fa-users-gear"></i> Lista de Usuarios Activos
+                    </h2>
+                    <button onclick="cargarListaUsuarios()" class="bg-slate-700 hover:bg-slate-600 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-2 text-slate-200 transition">
+                        <i class="fa-solid fa-rotate"></i> Actualizar Lista
                     </button>
                 </div>
-            </form>
+
+                <div class="overflow-x-auto rounded-xl border border-slate-700">
+                    <table class="w-full text-left text-sm text-slate-300 border-collapse">
+                        <thead class="bg-slate-900 text-xs text-slate-400 uppercase border-b border-slate-700">
+                            <tr>
+                                <th class="p-3">ID / Usuario</th>
+                                <th class="p-3">Nombre Completo</th>
+                                <th class="p-3">Correo Electrónico</th>
+                                <th class="p-3">Rol Actual</th>
+                                <th class="p-3 text-center">Cambiar Rol</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-usuarios-sistema" class="divide-y divide-slate-700 bg-slate-900/50">
+                            <!-- Carga dinámica -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </section>
 
     </main>
@@ -471,15 +504,15 @@
 
         // INICIALIZACIÓN
         window.addEventListener('DOMContentLoaded', () => {
-    const sesionGuardada = localStorage.getItem('usuario_contracargos');
-    if (sesionGuardada) {
-        usuarioActual = JSON.parse(sesionGuardada);
-        document.getElementById('modal-login').classList.add('hidden'); // Oculta el login
-        configurarInterfazSesion();
-    } else {
-        document.getElementById('modal-login').classList.remove('hidden');
-    }
-});
+            const sesionGuardada = localStorage.getItem('usuario_contracargos');
+            if (sesionGuardada) {
+                usuarioActual = JSON.parse(sesionGuardada);
+                document.getElementById('modal-login').classList.add('hidden');
+                configurarInterfazSesion();
+            } else {
+                document.getElementById('modal-login').classList.remove('hidden');
+            }
+        });
 
         // ==========================================
         // AUTENTICACIÓN Y SESIÓN
@@ -549,13 +582,11 @@
         function configurarInterfazSesion() {
             if (!usuarioActual) return;
 
-            // Mostrar info header
             document.getElementById('hdr-user-nombre').innerText = usuarioActual.nombre;
             document.getElementById('hdr-user-rol').innerText = usuarioActual.rol;
             document.getElementById('info-usuario-header').classList.remove('hidden');
             document.getElementById('btn-logout').classList.remove('hidden');
 
-            // Mostrar/Ocultar tab de Gestión de Usuarios según Rol
             const tabUsuarios = document.getElementById('tab-usuarios');
             if (['SuperAdmin', 'Admin'].includes(usuarioActual.rol)) {
                 tabUsuarios.classList.remove('hidden');
@@ -563,7 +594,6 @@
                 tabUsuarios.classList.add('hidden');
             }
 
-            // Aplicar permisos generales en UI (por si es Visor)
             aplicarPermisosPorRol();
         }
 
@@ -601,6 +631,7 @@
                 if (res.ok) {
                     alert(`¡Usuario creado exitosamente!\n\nContraseña temporal: ${resp.password_temporal}`);
                     document.getElementById('formUsuario').reset();
+                    cargarListaUsuarios();
                 } else {
                     alert("Error: " + resp.detail);
                 }
@@ -610,28 +641,123 @@
         }
 
         // ==========================================
+        // GESTIÓN DE USUARIOS (LISTA, CAMBIO ROL, RESET)
+        // ==========================================
+        async function cargarListaUsuarios() {
+            const tbody = document.getElementById('tabla-usuarios-sistema');
+            if (!tbody) return;
+            tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Cargando lista de usuarios...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_URL}/usuarios`);
+                const usuarios = await res.json();
+
+                if (!usuarios || usuarios.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No hay usuarios registrados.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = usuarios.map(u => `
+                    <tr class="hover:bg-slate-800/60 transition border-b border-slate-700/50">
+                        <td class="p-3">
+                            <div class="font-bold text-slate-200">#${u.id} - ${u.username}</div>
+                        </td>
+                        <td class="p-3 font-medium text-slate-300">${u.nombre}</td>
+                        <td class="p-3 text-slate-400 text-xs">${u.email}</td>
+                        <td class="p-3">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+                                u.rol === 'SuperAdmin' || u.rol === 'Admin' ? 'bg-amber-900/80 text-amber-300 border border-amber-700' :
+                                u.rol === 'Analista' ? 'bg-blue-900/80 text-blue-300 border border-blue-700' :
+                                'bg-slate-700 text-slate-300 border border-slate-600'
+                            }">
+                                ${u.rol}
+                            </span>
+                        </td>
+                        <td class="p-3 text-center">
+                            <select onchange="cambiarRolUsuario(${u.id}, this.value)" class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-amber-500">
+                                <option value="Analista" ${u.rol === 'Analista' ? 'selected' : ''}>Analista</option>
+                                <option value="Visor" ${u.rol === 'Visor' ? 'selected' : ''}>Visor</option>
+                                <option value="Admin" ${u.rol === 'Admin' ? 'selected' : ''}>Admin</option>
+                            </select>
+                        </td>
+                        <td class="p-3 text-center">
+                            <button onclick="resetearPasswordUsuario(${u.id}, '${u.username}')" class="bg-rose-900/40 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-700/60 text-xs px-2.5 py-1 rounded font-semibold transition">
+                                <i class="fa-solid fa-key mr-1"></i> Reset Pass
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-rose-400">Error al obtener usuarios.</td></tr>';
+            }
+        }
+
+        async function cambiarRolUsuario(userId, nuevoRol) {
+            if (!confirm(`¿Estás seguro de cambiar el rol de este usuario a ${nuevoRol}?`)) {
+                cargarListaUsuarios();
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/usuarios/${userId}/rol?nuevo_rol=${nuevoRol}`, {
+                    method: 'PATCH'
+                });
+
+                if (res.ok) {
+                    alert("Rol actualizado exitosamente");
+                    cargarListaUsuarios();
+                } else {
+                    const err = await res.json();
+                    alert("Error: " + (err.detail || "No se pudo actualizar el rol"));
+                }
+            } catch (e) {
+                alert("Error de conexión al cambiar el rol");
+            }
+        }
+
+        async function resetearPasswordUsuario(userId, username) {
+            if (!confirm(`¿Deseas restablecer la contraseña para el usuario "${username}"?`)) return;
+
+            try {
+                const res = await fetch(`${API_URL}/usuarios/${userId}/reset-pass`, {
+                    method: 'POST'
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`Contraseña restablecida con éxito.\n\nNueva clave temporal: ${data.password_temporal}`);
+                } else {
+                    alert("Error: " + data.detail);
+                }
+            } catch (e) {
+                alert("Error al conectar con la API");
+            }
+        }
+
+        // ==========================================
         // FUNCIONALIDADES EXISTENTES DE CONTRACARGOS
         // ==========================================
 
         function cambiarTab(tab) {
-    ['registro', 'gestion', 'alertas', 'reportes', 'fraudes', 'usuarios'].forEach(t => {
-        const sec = document.getElementById(`sec-${t}`);
-        const tabBtn = document.getElementById(`tab-${t}`);
-        if(sec) sec.classList.add('hidden');
-        if(tabBtn) tabBtn.className = "py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200";
-    });
-    
-    const activeSec = document.getElementById(`sec-${tab}`);
-    const activeTab = document.getElementById(`tab-${tab}`);
-    if(activeSec) activeSec.classList.remove('hidden');
-    if(activeTab) {
-        if(tab === 'usuarios') {
-            activeTab.className = "py-2 px-4 rounded-t-lg font-medium text-amber-400 border-b-2 border-amber-400 bg-amber-950/30";
-        } else {
-            activeTab.className = "py-2 px-4 rounded-t-lg font-medium bg-blue-600 text-white border-b-2 border-blue-400";
+            ['registro', 'gestion', 'alertas', 'reportes', 'fraudes', 'usuarios'].forEach(t => {
+                const sec = document.getElementById(`sec-${t}`);
+                const tabBtn = document.getElementById(`tab-${t}`);
+                if(sec) sec.classList.add('hidden');
+                if(tabBtn) tabBtn.className = "py-2 px-4 rounded-t-lg font-medium text-slate-400 hover:text-slate-200";
+            });
+            
+            const activeSec = document.getElementById(`sec-${tab}`);
+            const activeTab = document.getElementById(`tab-${tab}`);
+            if(activeSec) activeSec.classList.remove('hidden');
+            if(activeTab) {
+                if(tab === 'usuarios') {
+                    activeTab.className = "py-2 px-4 rounded-t-lg font-medium text-amber-400 border-b-2 border-amber-400 bg-amber-950/30";
+                    cargarListaUsuarios();
+                } else {
+                    activeTab.className = "py-2 px-4 rounded-t-lg font-medium bg-blue-600 text-white border-b-2 border-blue-400";
+                }
+            }
         }
-    }
-}
 
         function toggleCasoBAC() {
             const pasarela = document.getElementById('pasarela').value;
@@ -709,7 +835,7 @@
             }
         }
 
-       function poblarAniosDisponibles(datos) {
+        function poblarAniosDisponibles(datos) {
             const selectAnio = document.getElementById('filtroAnio');
             const valorActual = selectAnio.value;
             
@@ -819,7 +945,6 @@
             `).join('');
         }
 
-        /* APLICAR FILTROS: ORDEN, AÑO, MES, PASARELA Y RESOLUCIÓN */
         function aplicarFiltrosTabla() {
             const orden = document.getElementById('filtroOrden').value.trim().toLowerCase();
             const anio = document.getElementById('filtroAnio').value;
@@ -832,7 +957,6 @@
                 const matchPasarela = !pasarela || item.pasarela === pasarela;
                 const matchResolucion = !resolucion || (item.resolucion || "Pendiente") === resolucion;
 
-                // Extraer Año y Mes de la fecha de contracargo o transacción
                 const fechaRef = item.fecha_contracargo || item.fecha_transaccion;
                 let matchAnio = true;
                 let matchMes = true;
@@ -854,24 +978,22 @@
         }
 
         function limpiarFiltros() {
+            document.getElementById('filtroOrden').value = '';
+            document.getElementById('filtroAnio').value = '';
+            document.getElementById('filtroMes').value = '';
             document.getElementById('filtroPasarela').value = '';
-            document.getElementById('filtroPNL').value = '';
             document.getElementById('filtroResolucion').value = '';
             renderizarTabla(todosLosContracargos);
         }
 
         function descargarReporteExcel() {
             const pasarela = document.getElementById('filtroPasarela').value;
-            const pnl = document.getElementById('filtroPNL').value;
-            
             let url = `${API_URL}/contracargos/exportar-excel?`;
-            if (pasarela) url += `pasarela=${encodeURIComponent(pasarela)}&`;
-            if (pnl) url += `pnl=${encodeURIComponent(pnl)}`;
+            if (pasarela) url += `pasarela=${encodeURIComponent(pasarela)}`;
 
             window.location.href = url;
         }
 
-        // DESCARGAR MATRIZ DE REPORTES EXCEL
         function descargarMatrizExcel() {
             window.location.href = `${API_URL}/reportes/exportar-matriz-excel`;
         }
@@ -893,7 +1015,6 @@
             }
         }
 
-        // FUNCIÓN JS ACTUALIZADA PARA ENVIAR MÚLTIPLES ARCHIVOS
         async function subirEvidencia(id) {
             const input = document.getElementById(`file_${id}`);
             if (!input.files.length) return;
@@ -995,7 +1116,6 @@
                     return;
                 }
 
-                // Obtener la lista unificada de semanas
                 let semanas = [];
                 if (matriz["BAC"] && matriz["BAC"].semanas) {
                     semanas = matriz["BAC"].semanas;
@@ -1005,15 +1125,12 @@
 
                 const numSemanas = semanas.length || 1;
 
-                // Helper para formato de moneda (Q5,549.00 o espacio en blanco si es 0)
                 const formatMonto = (v) => v > 0 
                     ? new Intl.NumberFormat('es-GT', { style: 'currency', currency: 'GTQ' }).format(v).replace('GTQ', 'Q') 
                     : '';
 
-                // Helper para formato de cantidad
                 const formatCant = (v) => v > 0 ? v : '';
 
-                // 1. Construir estructura para el Consolidado General (BAC + Neonet)
                 const estadosValidos = ["Entregada", "No entregado"];
                 const filasConsolidado = estadosValidos.map(estado => {
                     const montosGeneral = {};
@@ -1044,7 +1161,6 @@
                     };
                 });
 
-                // Clonar la matriz y adjuntar el Consolidado
                 const matrizCompleta = {
                     ...matriz,
                     "Consolidado General": {
@@ -1053,7 +1169,6 @@
                     }
                 };
 
-                // 2. Renderizar las 3 Tablas (BAC, Neonet, Consolidado)
                 let html = '';
 
                 for (const tituloTab in matrizCompleta) {
@@ -1066,7 +1181,6 @@
                             
                             <div class="overflow-x-auto">
                                 <table class="w-full text-xs text-left text-slate-200 border-collapse border border-slate-800">
-                                    <!-- ENCABEZADOS DE DOBLE NIVEL -->
                                     <thead>
                                         <tr class="bg-[#0f1f2e] text-slate-300 font-semibold border-b border-slate-800">
                                             <th rowspan="2" class="p-3 border-r border-slate-800 w-1/5 uppercase text-[11px] tracking-wider">${tituloTab}</th>
@@ -1074,30 +1188,24 @@
                                             <th colspan="${numSemanas}" class="p-2 text-center bg-[#0d2238] text-blue-400 font-bold">Cantidad de ordenes</th>
                                         </tr>
                                         <tr class="bg-[#122536] text-slate-300 font-semibold border-b border-slate-800">
-                                            <!-- Semanas para Monto -->
                                             ${semanas.map(s => `<th class="p-2 text-center border-r border-slate-800 font-mono">${s}</th>`).join('')}
-                                            <!-- Semanas para Cantidad -->
                                             ${semanas.map((s, idx) => `
                                                 <th class="p-2 text-center ${idx < numSemanas - 1 ? 'border-r border-slate-800' : ''} font-mono">${s}</th>
                                             `).join('')}
                                         </tr>
                                     </thead>
 
-                                    <!-- CUERPO DE LA TABLA -->
                                     <tbody class="divide-y divide-slate-800/60 bg-[#09131d]">
                                         ${filasData.map(f => `
                                             <tr class="hover:bg-slate-800/40 transition-colors">
-                                                <!-- Nombre del Estado -->
                                                 <td class="p-3 font-medium border-r border-slate-800 text-slate-300">${f.estado_orden}</td>
                                                 
-                                                <!-- Celdas de Montos -->
                                                 ${semanas.map(s => `
                                                     <td class="p-3 text-center border-r border-slate-800 font-medium text-emerald-400">
                                                         ${formatMonto(f.montos[s])}
                                                     </td>
                                                 `).join('')}
 
-                                                <!-- Celdas de Cantidades -->
                                                 ${semanas.map((s, idx) => `
                                                     <td class="p-3 text-center ${idx < numSemanas - 1 ? 'border-r border-slate-800' : ''} font-medium text-slate-200">
                                                         ${formatCant(f.cantidades[s])}
@@ -1119,6 +1227,7 @@
                 cont.innerHTML = '<p class="text-rose-400 col-span-2 p-4">Error al cargar reportes</p>';
             }
         }
+
         async function cargarFraudesPreventivos() {
             const tbody = document.getElementById('tabla-fraudes-drive');
             tbody.innerHTML = '<tr><td colspan="7" class="p-4 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Actualizando match con la BD...</td></tr>';
@@ -1174,7 +1283,6 @@
             }).join('');
         }
 
-        /* BÚSQUEDA INSTANTÁNEA POR ORDEN EN MONITOREO */
         function filtrarTablaFraudes() {
             const query = document.getElementById('filtroOrdenFraudes').value.trim().toLowerCase();
             const filtrados = todosLosFraudesDrive.filter(item => {
