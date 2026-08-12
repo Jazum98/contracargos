@@ -34,14 +34,10 @@ class CambiarPasswordReq(BaseModel):
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-# Ruta de Secret Files en Render
-RENDER_SECRET_PATH = "/etc/secrets/credentials.json"
 
-# Si existe el archivo en Render lo usa; si no, usa la ruta local
-if os.path.exists(RENDER_SECRET_PATH):
-    GOOGLE_CREDENTIALS_FILE = RENDER_SECRET_PATH
-else:
-    GOOGLE_CREDENTIALS_FILE = os.path.join(BASE_DIR, "credentials.json")
+
+
+
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -187,32 +183,48 @@ def cambiar_password(datos: CambiarPasswordReq):
 def crear_contracargo(data: ContracargoCreate):
     conn = get_db_connection()
     cursor = conn.cursor()
-    p_and_l_calc = calcular_p_and_l(data.fecha_contracargo)
-    
-    # Sanitización para evitar violación de restricciones CHECK en la base de datos
-    estado_orden_clean = data.estado_orden
-    if estado_orden_clean:
-        # Elimina espacios dobles/múltiples y espacios al inicio o final
-        estado_orden_clean = re.sub(r'\s+', ' ', estado_orden_clean).strip()
-    
-    query = """
-        INSERT INTO contracargos (
-            pasarela, no_idcontracargo, no_orden, correo_cliente, tarjeta_mascarada,
-            monto, fecha_transaccion, fecha_contracargo, estado_orden, autorizacion,
-            metodo_pago, tipo_contracargo, unidad_negocio, estado_ocadmin, observaciones, p_and_l
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING *;
-    """
-    cursor.execute(query, (
-        data.pasarela, data.no_idcontracargo, data.no_orden, data.correo_cliente, data.tarjeta_mascarada,
-        data.monto, data.fecha_transaccion, data.fecha_contracargo, estado_orden_clean, data.autorizacion,
-        data.metodo_pago, data.tipo_contracargo, data.unidad_negocio, data.estado_ocadmin, data.observaciones, p_and_l_calc
-    ))
-    nuevo_registro = cursor.fetchone()
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return nuevo_registro
+    try:
+        p_and_l_calc = calcular_p_and_l(data.fecha_contracargo)
+
+        # Sanitización para evitar violación de restricciones CHECK en la base de datos
+        estado_orden_clean = data.estado_orden
+        if estado_orden_clean:
+            # Elimina espacios dobles/múltiples y espacios al inicio o final
+            estado_orden_clean = re.sub(r'\s+', ' ', estado_orden_clean).strip()
+
+        query = """
+            INSERT INTO contracargos (
+                pasarela, no_idcontracargo, no_orden, correo_cliente, tarjeta_mascarada,
+                monto, fecha_transaccion, fecha_contracargo, estado_orden, autorizacion,
+                metodo_pago, tipo_contracargo, unidad_negocio, estado_ocadmin, observaciones, p_and_l
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING *;
+        """
+        cursor.execute(query, (
+            data.pasarela, data.no_idcontracargo, data.no_orden, data.correo_cliente, data.tarjeta_mascarada,
+            data.monto, data.fecha_transaccion, data.fecha_contracargo, estado_orden_clean, data.autorizacion,
+            data.metodo_pago, data.tipo_contracargo, data.unidad_negocio, data.estado_ocadmin, data.observaciones, p_and_l_calc
+        ))
+        nuevo_registro = cursor.fetchone()
+        conn.commit()
+        return nuevo_registro
+    except psycopg2.errors.UniqueViolation:
+        conn.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail="Ya existe un contracargo registrado con ese No. de Orden Interna o No. de Autorización."
+        )
+    except psycopg2.errors.CheckViolation as e:
+        conn.rollback()
+        raise HTTPException(status_code=400, detail=f"Un valor no cumple las restricciones permitidas: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al registrar el contracargo: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.get("/api/contracargos")
 def listar_contracargos():
