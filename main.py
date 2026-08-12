@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import zipfile
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -188,6 +189,12 @@ def crear_contracargo(data: ContracargoCreate):
     cursor = conn.cursor()
     p_and_l_calc = calcular_p_and_l(data.fecha_contracargo)
     
+    # Sanitización para evitar violación de restricciones CHECK en la base de datos
+    estado_orden_clean = data.estado_orden
+    if estado_orden_clean:
+        # Elimina espacios dobles/múltiples y espacios al inicio o final
+        estado_orden_clean = re.sub(r'\s+', ' ', estado_orden_clean).strip()
+    
     query = """
         INSERT INTO contracargos (
             pasarela, no_idcontracargo, no_orden, correo_cliente, tarjeta_mascarada,
@@ -198,7 +205,7 @@ def crear_contracargo(data: ContracargoCreate):
     """
     cursor.execute(query, (
         data.pasarela, data.no_idcontracargo, data.no_orden, data.correo_cliente, data.tarjeta_mascarada,
-        data.monto, data.fecha_transaccion, data.fecha_contracargo, data.estado_orden, data.autorizacion,
+        data.monto, data.fecha_transaccion, data.fecha_contracargo, estado_orden_clean, data.autorizacion,
         data.metodo_pago, data.tipo_contracargo, data.unidad_negocio, data.estado_ocadmin, data.observaciones, p_and_l_calc
     ))
     nuevo_registro = cursor.fetchone()
