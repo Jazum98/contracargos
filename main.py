@@ -594,36 +594,32 @@ def reporte_matriz():
 @app.get("/api/fraudes-preventivos")
 def obtener_fraudes_preventivos():
     """
-    Lee la pestaña 'Sheet1' usando la variable de entorno GOOGLE_CREDENTIALS_JSON o el archivo local.
+    Lee la pestaña 'Sheet1' usando ÚNICAMENTE la variable de entorno GOOGLE_CREDENTIALS_JSON.
+    No se admite ningún archivo credentials.json en disco (evita exposición de la llave).
     """
     try:
-        # 1. Intentar cargar credenciales
+        # 1. Cargar credenciales desde la variable de entorno
         google_json_env = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-        
-        if google_json_env:
-            try:
-                creds_dict = json.loads(google_json_env)
-            except Exception as e_json:
-                raise HTTPException(status_code=500, detail=f"JSON corrupto en variable de entorno: {str(e_json)}")
-                
-            if "private_key" in creds_dict:
-                creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-            
-            try:
-                gc = gspread.service_account_from_dict(creds_dict)
-            except Exception as e_auth:
-                raise HTTPException(status_code=500, detail=f"Fallo de autenticación con JSON de entorno: {str(e_auth)}")
-                
-        elif os.path.exists(GOOGLE_CREDENTIALS_FILE):
-            try:
-                gc = gspread.service_account(filename=GOOGLE_CREDENTIALS_FILE)
-            except Exception as e_file:
-                raise HTTPException(status_code=500, detail=f"Fallo de autenticación con credentials.json local: {str(e_file)}")
-        else:
+
+        if not google_json_env:
             raise HTTPException(
-                status_code=500, 
-                detail="No se encontró credentials.json local ni la variable GOOGLE_CREDENTIALS_JSON en Render."
+                status_code=500,
+                detail="No se encontró la variable de entorno GOOGLE_CREDENTIALS_JSON en Render. "
+                       "Configúrala en Render > Environment con el contenido completo del JSON de la cuenta de servicio."
             )
+
+        try:
+            creds_dict = json.loads(google_json_env)
+        except Exception as e_json:
+            raise HTTPException(status_code=500, detail=f"JSON corrupto en variable de entorno: {str(e_json)}")
+
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+
+        try:
+            gc = gspread.service_account_from_dict(creds_dict)
+        except Exception as e_auth:
+            raise HTTPException(status_code=500, detail=f"Fallo de autenticación con JSON de entorno: {str(e_auth)}")
 
         # 2. Conectar a la hoja de Google Sheets
         try:
