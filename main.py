@@ -465,7 +465,7 @@ def reporte_cuatro_semanas():
 
         # 3. Armar la matriz basándonos en esas semanas reales
         matriz_resultado = {}
-        estados_requeridos = ["Entregada", "No entregado"]
+        estados_requeridos = ["Entregada", "No Entregado"]
 
         for pasarela in ["BAC", "Neonet"]:
             filas = []
@@ -534,7 +534,7 @@ def exportar_matriz_excel():
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             for pasarela in ["BAC", "Neonet"]:
                 filas_excel = []
-                estados = ["Entregada", "No entregado"]
+                estados = ["Entregada", "No Entregado"]
                 
                 for estado in estados:
                     fila = {"Estado Orden": estado}
